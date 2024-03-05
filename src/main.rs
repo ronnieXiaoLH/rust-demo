@@ -5,36 +5,36 @@
     // number_guessing::main();
 // }
 
-// fn main() {
-//     fn plus_one(x: Option<i32>) -> Option<i32> {
-//         match x {
-//             None => None,
-//             Some(i) => Some(i + 1),
-//         }
-//     }
+use std::fs::File;
+use std::io::{self, Read};
 
-//     let five = Some(5);
-//     let six = plus_one(five);
-//     let none = plus_one(None);
+// 一个简单的函数，从文件中读取内容并返回一个 Result<String, io::Error>
+fn read_file_content(filename: &str) -> Result<String, io::Error> {
+    let mut file = File::open(filename)?; // 尝试打开文件，如果失败则返回 Err
 
-//     println!("{:?}", six);
-//     println!("{:?}", none);
-// }
+    let mut content = String::new();
+    file.read_to_string(&mut content)?; // 尝试读取文件内容，如果失败则返回 Err
 
-
-fn main() {
-  // 假设这是一个数字变量
-  let my_number = 8;
-
-  // 使用 if let 检查是否为偶数
-  if let even_number = my_number % 2 {
-      if (even_number == 0) {
-          println!("{} 是偶数！", my_number);
-      } else {
-          println!("{} 不是偶数！", my_number);
-      }
-  } 
+    Ok(content) // 如果成功，则返回包含文件内容的 Result
 }
+
+// 主函数，调用上述函数并处理可能的错误
+fn main() {
+    let filename = "example.txt";
+
+    match read_file_content(filename) {
+        Ok(content) => {
+            println!("File content:\n{}", content);
+        }
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+        }
+    }
+}
+
+
+
+
 
 
 
