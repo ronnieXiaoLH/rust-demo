@@ -630,6 +630,60 @@ impl Message {
 }
 ```
 
+**Option 枚举**
+
+在 rust 中，`Option` 枚举中有 `Some` 和 `None` 两个变体，用于处理可能存在或不存在的值的情况。它被设计用于表示一个可能包含值的容器，或者肯呢个为空的情况。
+
+1. **Some:**
+
+- `Some` 是 `Option` 枚举的一个变体，用于表示一个包含值的情况。
+- 当使用 `Some` 时，它包装了一个可能的值，表示这个值是存在的。
+
+```rs
+let some_value: Option<i32> = Some(42);
+```
+
+上述代码中，`Some(42)` 表示包含整数 42 的 `Option`。
+
+2. **None:**
+
+- `None` 同样是 `Option` 枚举的一个变体，用于表示一个空值或不存在值的情况。
+- 当使用 `None` 时，它表示不包含值的情况，即空。
+
+```rs
+let no_value: Option<i32> = None;
+```
+
+上述代码中，`None` 代表一个不包含值的 `Option`。
+
+```rs
+fn main() {
+    // 使用 Some 包装一个值
+    let some_value: Option<i32> = Some(42);
+
+    // 使用 None 表示空值
+    let no_value: Option<i32> = None;
+
+    // 使用模式匹配提取值
+    match some_value {
+        Some(value) => println!("Has value: {}", value),
+        None => println!("No value"),
+    }
+
+    match no_value {
+        Some(value) => println!("Has value: {}", value),
+        None => println!("No value"),
+    }
+}
+```
+
+上述代码将输出：
+
+```
+Has value: 42
+No value
+```
+
 ## match 控制流
 
 对于 `if`，表达式必须返回一个布尔值，对于 `match` 来说，它可以是任何类型。
