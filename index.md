@@ -1312,3 +1312,301 @@ fn main() {
 
 - 当函数可能返回错误时，使用 Result 来传递错误信息，而不是通过 `Panic` 终止程序。
 - 允许调用方选择如何处理错误，可以通过模式匹配或者 `Result` 的方法来获取值或者处理错误。
+
+## 泛型
+
+使用使用泛型可以为函数签名或结构体等项创建定义，这样它们就可以用于多种不同的具体数据类型。泛型的核心思想是参数化类型，这使得你可以编写与具体类型无关的代码。
+
+**泛型函数**
+
+```rs
+fn main() {
+    fn compare<T>(a: T, b: T) -> bool
+    where
+        T: PartialOrd,
+    {
+        a < b
+    }
+
+    println!("{}", compare(1, 2));
+    println!("{}", compare('a', 'b'));
+}
+```
+
+上述代码中，`compare` 就是一个泛型函数，`<T>` 表示这个函数是泛型的，`T` 是一个占位符，表示任意类型。`PartialOrd` 是一个 `trait`，表示类型可以进行部分比较。
+
+**泛型结构体**
+
+```rs
+fn main() {
+    struct Point<T> {
+        x: T,
+        y: T,
+    }
+
+    let integer = Point { x: 5, y: 10 };
+    let float = Point { x: 1.0, y: 4.0 };
+}
+```
+
+上述代码中，`Point<T>` 是一个泛型结构体，`<T>` 表示这个结构体是泛型的，`T` 是一个占位符，表示任意类型。
+
+**泛型枚举**
+
+```rs
+fn main() {
+  enum Option<T> {
+      Some(T),
+      None,
+  }
+}
+```
+
+上述代码中，`Option<T>` 是一个泛型枚举，`<T>` 表示这个枚举是泛型的，`T` 是一个占位符，表示任意类型。
+
+## Trait
+
+在 rust 中，`trait` 是一种定义共享行为的机制，类似于其他编程语言中的接口或抽象类。`trait` 允许你在不同类型之间共享方法签名，以便它们可以实现相同的功能。这提供了一种在不同类型之间实现共享行为的方式，而无需继承。
+
+**基本语法**
+
+```rs
+trait Shape {
+    // 方法签名
+    fn area(&self) -> f64;
+}
+```
+
+**实现 trait**
+
+要使类型实现一个 `trait`，可以在类型上使用 `impl` 块，并提供 `trait` 中定义的方法的具体实现。
+
+```rs
+trait Shape {
+      fn area(&self) -> f64;
+  }
+
+struct Rectangle {
+  width: f64,
+  height: f64,
+}
+
+impl Shape for Rectangle {
+    fn area(&self) -> f64 {
+        self.width * self.height
+    }
+}
+```
+
+**默认方法**
+
+`tarit` 可以包含默认实现的方法，实现这个 `trait` 的类型可以选择覆盖这些默认实现。
+
+```rs
+fn main() {
+    trait Shape {
+        fn area(&self) -> f64;
+        fn my_method_with_default(&self) {
+          println!("Default implementation");
+        }
+    }
+
+    struct Rectangle {
+        width: f64,
+        height: f64,
+    }
+
+    impl Shape for Rectangle {
+        fn area(&self) -> f64 {
+            self.width * self.height
+        }
+    }
+
+    let rect = Rectangle { width: 2.0, height: 3.0 };
+    // 调用默认方法
+    rect.my_method_with_default(); // 输出 Default implementation
+
+    struct Circle {
+        radius: f64
+    }
+
+    impl Shape for Circle {
+        fn area(&self) -> f64 {
+            std::f64::consts::PI * self.radius * self.radius
+        }
+
+        // 覆盖默认实现
+        fn my_method_with_default(&self) {
+            println!("radius: {}", self.radius);
+        }
+    }
+
+    let circle = Circle { radius: 2.0 };
+    circle.my_method_with_default(); // 输出 radius: 2
+}
+```
+
+**Trait 作为参数**
+
+```rs
+fn main() {
+    trait Shape {
+        fn area(&self) -> f64;
+    }
+
+    struct Rectangle {
+        width: f64,
+        height: f64,
+    }
+
+    impl Shape for Rectangle {
+        fn area(&self) -> f64 {
+            self.width * self.height
+        }
+    }
+
+    let rect = Rectangle { width: 2.0, height: 3.0 };
+
+    struct Circle {
+        radius: f64
+    }
+
+    impl Shape for Circle {
+        fn area(&self) -> f64 {
+            std::f64::consts::PI * self.radius * self.radius
+        }
+    }
+
+    let circle = Circle { radius: 2.0 };
+
+    fn get_area(shape: impl Shape) -> f64 {
+        shape.area()
+    }
+
+    let rect_area = get_area(rect);
+    let circle_area = get_area(circle);
+    println!("{:?}", rect_area); // 6.0
+    println!("{:?}", circle_area); // 12.566370614359172
+}
+```
+
+上述代码中，`shape` 参数指定了 `impl` 关键字和 `trait` 名称，该参数支持任何实现了指定 `trait` 的类型。在 `get_area` 函数体中，可以调用任何来自 `Shape` trait 的方法，比如 `area` 。
+
+**Trait Bound 语法**
+
+`trait bound` 与泛型参数声明在一起，位于尖括号中的冒号后面。`impl Trait` 很方便，适用于短小的例子。`trait bound` 则适用于更复杂的场景
+
+```rs
+fn get_area(shape1: impl Shape, shape2: impl Shape) -> f64 {
+    shape1.area() + shape2.area()
+}
+
+fn get_area2<T: Shape>(shape1: T, shape2: T) -> f64 {
+    shape1.area() + shape2.area()
+}
+```
+
+**通过 `+` 指定多个 `trait bound`**
+
+```rs
+pub fn notify(item: impl Summary + Display) {}
+
+pub fn notify2<T: Summary + Display>(item: T) {}
+```
+
+**通过 `where` 简化 `trait bound`**
+
+```rs
+fn some_function<T: Display + Clone, U: Clone + Debug>(t: T, u: U) -> i32 {}
+
+fn some_function<T, U>(t: T, u: U) -> i32
+    where T: Display + Clone,
+          U: Clone + Debug
+{}
+```
+
+## 生命周期
+
+1. **基本概念：**
+
+- **生命周期参数：** 生命周期参数是标识引用存在时间的标记。它们通常用单引号表示，如 `'a`, `'b` 等。生命周期参数用于描述引用的作用域，即引用存在的时间范围。
+- **生命周期注解：** 生命周期注解是用来告诉编译器引用之间的关系，帮助编译器理解引用的有效性。生命周期注解的语法是在引用类型后面使用生命周期参数。
+- **生命周期省略规则：** 编译器在某些情况下可以推断生命周期，因此代码中并非总是需要显示注解生命周期。这称为生命周期省略规则。
+
+2. **函数中的生命周期：**
+
+在函数中，生命周期通常与函数参数和返回值有关。
+
+```rs
+fn longest<'a>(s1: &'a str, s2: &'a str) -> &'a str {
+    if s1.len() > s2.len() {
+        s1
+    } else {
+        s2
+    }
+}
+```
+
+上述代码中，`'a` 生命周期参数表示输入字符串引用 `s1` 和 `s2` 有相同的生命周期。这意味着返回的引用的生命周期也与输入引用的生命周期相同。
+
+3. **结构体中的生命周期：**
+
+生命周期也可以在结构体中使用，以确保结构体的字段引用具有相同或不同的生命周期。
+
+```rs
+struct Foo<'a> {
+    x: &'a i32,
+}
+
+fn main() {
+    let y = &5; // 这个引用的生命周期要长于Foo实例的生命周期
+    let f = Foo { x: y };
+    println!("{}", f.x);
+}
+```
+
+上述代码中，结构体 `Foo` 中的字段 `x` 有生命周期 `'a`，而引用 `y` 的生命周期要长于 `Foo` 实例的生命周期。
+
+4. **静态生命周期：**
+
+`'static` 生命周期是一个特殊的生命周期，表示整个程序的执行时间。所有的字符串字面量都拥有 `'static` 生命周期。我们也可以像下面这样标注出来：
+
+```rs
+fn main() {
+  let s: &'static str = "I have a static lifetime.";
+}
+```
+
+```rs
+fn foo(s: &'static str) {
+    // 函数体
+}
+
+fn main() {
+    let s: &'static str = "Hello, World!";
+    foo(s);
+}
+```
+
+在上述代码中，`'static` 生命周期确保字符串字面量在整个程序执行期间都是有效的。
+
+5. **生命周期限制条件：**
+
+有时候，为了确保引用的有效性，我们需要使用生命周期来约束泛型参数。
+
+```rs
+fn longest_with_an_announcement<'a, T>(s1: &'a str, s2: &'a str, ann: T) -> &'a str
+    where T: Display
+{
+    println!("Announcement: {}", ann);
+    if s1.len() > s2.len() {
+        s1
+    } else {
+        s2
+    }
+}
+```
+
+上述代码中，`'a` 生命周期参数限制了泛型参数 `T` 的生命周期，确保它与输入引用的生命周期相同。
+
+**总而言之，生命周期是 rust 中保障引用有效性的关键概念，它允许我们在编译时检查引用的正确性，从而避免悬垂引用和数据竞争。**
