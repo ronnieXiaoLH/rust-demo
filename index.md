@@ -1610,3 +1610,237 @@ fn longest_with_an_announcement<'a, T>(s1: &'a str, s2: &'a str, ann: T) -> &'a 
 上述代码中，`'a` 生命周期参数限制了泛型参数 `T` 的生命周期，确保它与输入引用的生命周期相同。
 
 **总而言之，生命周期是 rust 中保障引用有效性的关键概念，它允许我们在编译时检查引用的正确性，从而避免悬垂引用和数据竞争。**
+
+## 闭包
+
+在 rust 中，**闭包**是可以保存进变量或作为参数传递给其他函数的**匿名函数**。
+
+可以在一个地方创建闭包，然后再不同的上下文中执行闭包运算。
+
+不同于函数，闭包允许捕获调用者作用域中的值。
+
+```rs
+fn main() {
+    let add = |x, y| x + y;
+
+    let result = add(5, 3);
+    println!("{}", result);
+}
+```
+
+上述代码中，`add` 就是一个闭包。闭包定义是 `add` 赋值的 `=` 之后的部分，闭包定义是以一对竖线 `|` 开始，在竖线中间指定闭包的参数。`|x, y|` 就是这个闭包的参数。
+参数之后是存放闭包的大括号，如果标题只有一行，则大括号可以省略。闭包体最后一行的返回值作为调用闭包时的返回值。
+
+**闭包类型推断和标注**
+
+闭包不要求像 `fn` 函数那样在参数和返回值上注明类型，但是也可以添加类型标注。
+
+```rs
+fn  add_v1   (x: u32, y: u32) -> u32 { x + y };
+let add_v2 = |x: u32, y: u32| -> u32 { x + y };
+let add_v3 = |x, y|                  { x + y };
+let add_v4 = |x, y|                    x + y  ;
+```
+
+上述代码中，展示了闭包语法如何类似于函数语法。
+
+**不能调用一个闭包被推断为两个不同的类型**
+
+```rs
+fn main() {
+    let add = |x, y| x + y;
+
+    let result = add(5, 3);
+
+    let s1 = String::from("Hello");
+    let s2 = "World";
+    let result2 = add(s1, s2);
+}
+```
+
+上述代码中，尝试调用 `add` 闭包推断为两种不同的类型，这是会导致编译出错的。
+
+```rs
+use std::thread;
+use std::time::Duration;
+
+// 根据强度计算健身计划
+fn simulated_expensive_calculation(intensity: u32) -> u32 {
+    println!("calculating slowly...");
+    thread::sleep(Duration::from_secs(2));
+    intensity
+}
+
+fn generate_workout(intensity: u32, random_num: u32) {
+    let expensive_result = simulated_expensive_calculation(intensity);
+
+    if intensity < 6 {
+        println!("先做俯卧撑{}组", expensive_result);
+        println!("再做仰卧起坐{}组", expensive_result);
+    } else {
+        if random_num == 3 {
+            println!("周三休息")
+        } else {
+            println!("先练力量{}组", expensive_result);
+            println!("再跑步{}分钟", expensive_result * 10);
+        }
+    }
+}
+
+fn main() {
+    let simulated_user_specified_value = 10;
+    let simulated_random_number = 7;
+
+    generate_workout(
+        simulated_user_specified_value,
+        simulated_random_number
+    );
+}
+```
+
+上面代码中，是一个制定健身计划的例子，先根据用户的运动强度，强度值小于 6 做俯卧撑和仰卧起坐，反之，如果是周三则消息，不是则做力量训练和跑步。
+`simulated_expensive_calculation` 这个方法是一个耗时计算，在所有情况下都需要执行它，哪怕是那个完全不需要这一结果的第一个 `else` 的 `if` 中，下面我们使用闭包来优化。
+
+```rs
+use std::thread;
+use std::time::Duration;
+
+fn generate_workout(intensity: u32, random_num: u32) {
+    let expensive_closure = |num| {
+        println!("calculating slowly...");
+        thread::sleep(Duration::from_secs(2));
+        num
+    };
+
+    if intensity < 6 {
+        println!("先做俯卧撑{}组", expensive_closure(intensity));
+        println!("再做仰卧起坐{}组", expensive_closure(intensity));
+    } else {
+        if random_num == 3 {
+            println!("周三休息")
+        } else {
+            println!("先练力量{}组", expensive_closure(intensity));
+            println!("再跑步{}分钟", expensive_closure(intensity) * 10);
+        }
+    }
+}
+
+fn main() {
+    let simulated_user_specified_value = 10;
+    let simulated_random_number = 3;
+
+    generate_workout(
+        simulated_user_specified_value,
+        simulated_random_number
+    );
+}
+```
+
+上面代码中，我们将 `simulated_expensive_calculation` 改成了闭包，当 `simulated_random_number` 的值改为 3 时，即满足进入第一个 `else` 的 `if` 分支中时，不会去进行耗时运算。
+
+**使用带有泛型和 Fn trait 的闭包**
+
+在 rust 中，闭包有三种不同的 trait，分别是 `Fn`、`FnMut` 和 `FnOnce`。这些 trait 反映了闭包对其环境中的变量的不同访问方式。
+
+1. **Fn trait:**
+
+闭包可以以不可变引用的方式访问其环境中的变量。
+
+```rs
+let add = |x, y| x + y;
+let result = add(3, 5);
+println!("Result: {}", result);
+```
+
+2. **FnMut trait:**
+
+闭包可以以可变引用的方式访问其环境中的变量。
+
+```rs
+let mut counter = 0;
+let mut increment = || {
+    counter += 1;
+};
+increment();
+println!("Counter: {}", counter);
+```
+
+3. **FnOnce trait:**
+
+闭包会消耗其环境中的变量，使其不再可用。
+
+```rs
+let owned_value = String::from("Hello");
+let consume_closure = || {
+    println!("Value: {}", owned_value);
+    // owned_value 的所有权被移动到闭包中，无法再次使用
+};
+consume_closure();
+// 下面的代码将无法编译，因为 owned_value 已经在闭包中被消耗了
+// println!("Value: {}", owned_value);
+```
+
+上述制定健身计算的例子使用闭包优化后，还有一个问题是，在同一个 `if` 和 `else` 的分支中，闭包被执行了两次，尽管闭包两次返回的结果一致。下面我们来优化它：
+
+```rs
+use std::thread;
+use std::time::Duration;
+
+struct Cacher<T>
+    where T: Fn(u32) -> u32
+{
+    calculation: T,
+    value: Option<u32>,
+}
+
+impl<T> Cacher<T>
+    where T: Fn(u32) -> u32
+{
+    fn new(calculation: T) -> Cacher<T> {
+        Cacher { calculation, value: None }
+    }
+
+    fn value(&mut self, arg: u32) -> u32 {
+        match self.value {
+            Some(v) => v,
+            None => {
+                let v = (self.calculation)(arg);
+                self.value = Some(v);
+                v
+            }
+        }
+    }
+}
+
+fn generate_workout(intensity: u32, random_num: u32) {
+    let mut expensive_result = Cacher::new(|num| {
+        println!("calculating slowly...");
+        thread::sleep(Duration::from_secs(2));
+        num
+    });
+
+    if intensity < 6 {
+        println!("先做俯卧撑{}组", expensive_result.value(intensity));
+        println!("再做仰卧起坐{}组", expensive_result.value(intensity));
+    } else {
+        if random_num == 3 {
+            println!("周三休息")
+        } else {
+            println!("先练力量{}组", expensive_result.value(intensity));
+            println!("再跑步{}分钟", expensive_result.value(intensity) * 10);
+        }
+    }
+}
+
+fn main() {
+    let simulated_user_specified_value = 10;
+    let simulated_random_number = 5;
+
+    generate_workout(
+        simulated_user_specified_value,
+        simulated_random_number
+    );
+}
+```
+
+上述代码中，使用 `Cacher` 的 `calculation` 字段存储闭包，使用 `value` 字段存储闭包的执行结果。当需要闭包的执行结果时，它调用 `value` 方法，该方法会判断 `self.value` 是否已经有了一个 `Some` 的结果值，如果有直接返回，而不会再次执行闭包。所以耗时操作不会多次执行。
