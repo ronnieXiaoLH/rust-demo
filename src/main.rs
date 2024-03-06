@@ -29,68 +29,89 @@
 //     }
 // }
 
-use std::thread;
-use std::time::Duration;
+// use std::thread;
+// use std::time::Duration;
 
-struct Cacher<T>
-    where T: Fn(u32) -> u32
-{
-    calculation: T,
-    value: Option<u32>,
-}
+// struct Cacher<T>
+//     where T: Fn(u32) -> u32
+// {
+//     calculation: T,
+//     value: Option<u32>,
+// }
 
-impl<T> Cacher<T> 
-    where T: Fn(u32) -> u32
-{
-    fn new(calculation: T) -> Cacher<T> {
-        Cacher { calculation, value: None }
+// impl<T> Cacher<T> 
+//     where T: Fn(u32) -> u32
+// {
+//     fn new(calculation: T) -> Cacher<T> {
+//         Cacher { calculation, value: None }
+//     }
+
+//     fn value(&mut self, arg: u32) -> u32 {
+//         match self.value {
+//             Some(v) => v,
+//             None => {
+//                 let v = (self.calculation)(arg);
+//                 self.value = Some(v);
+//                 v
+//             }
+//         }
+//     }
+// }
+
+// fn generate_workout(intensity: u32, random_num: u32) {
+//     let mut expensive_result = Cacher::new(|num| {
+//         println!("calculating slowly...");
+//         thread::sleep(Duration::from_secs(2));
+//         num
+//     });
+
+//     if intensity < 6 {
+//         println!("先做俯卧撑{}组", expensive_result.value(intensity));
+//         println!("再做仰卧起坐{}组", expensive_result.value(intensity));
+//     } else {
+//         if random_num == 3 {
+//             println!("周三休息")
+//         } else {
+//             println!("先练力量{}组", expensive_result.value(intensity));
+//             println!("再跑步{}分钟", expensive_result.value(intensity) * 10);
+//         }
+//     }
+// }
+
+// fn main() {
+//     let simulated_user_specified_value = 10;
+//     let simulated_random_number = 5;
+
+//     generate_workout(
+//         simulated_user_specified_value,
+//         simulated_random_number
+//     );
+// }
+
+fn main() {
+    struct Counter {
+        current: usize,
+        max: usize,
     }
-
-    fn value(&mut self, arg: u32) -> u32 {
-        match self.value {
-            Some(v) => v,
-            None => {
-                let v = (self.calculation)(arg);
-                self.value = Some(v);
-                v
+    
+    impl Iterator for Counter {
+        type Item = usize;
+    
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current < self.max {
+                let result = Some(self.current);
+                self.current += 1;
+                result
+            } else {
+                None
             }
         }
     }
+    
+    let counter = Counter { current: 0, max: 5 };
+    let values: Vec<_> = counter.collect();
+    println!("{:?}", values) // [0, 1, 2, 3, 4]
 }
-
-fn generate_workout(intensity: u32, random_num: u32) {
-    let mut expensive_result = Cacher::new(|num| {
-        println!("calculating slowly...");
-        thread::sleep(Duration::from_secs(2));
-        num
-    });
-
-    if intensity < 6 {
-        println!("先做俯卧撑{}组", expensive_result.value(intensity));
-        println!("再做仰卧起坐{}组", expensive_result.value(intensity));
-    } else {
-        if random_num == 3 {
-            println!("周三休息")
-        } else {
-            println!("先练力量{}组", expensive_result.value(intensity));
-            println!("再跑步{}分钟", expensive_result.value(intensity) * 10);
-        }
-    }
-}
-
-fn main() {
-    let simulated_user_specified_value = 10;
-    let simulated_random_number = 5;
-
-    generate_workout(
-        simulated_user_specified_value,
-        simulated_random_number
-    );
-}
-
-
-
-
 
 
 

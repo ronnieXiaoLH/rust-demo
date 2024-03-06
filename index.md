@@ -1844,3 +1844,93 @@ fn main() {
 ```
 
 上述代码中，使用 `Cacher` 的 `calculation` 字段存储闭包，使用 `value` 字段存储闭包的执行结果。当需要闭包的执行结果时，它调用 `value` 方法，该方法会判断 `self.value` 是否已经有了一个 `Some` 的结果值，如果有直接返回，而不会再次执行闭包。所以耗时操作不会多次执行。
+
+## 迭代器
+
+在 rust 中，迭代器是一种非常强大和灵活的抽象，用于处理集合中的元素。迭代器允许你使用一种统一的方式遍历集合。
+
+**创建迭代器**
+
+可以使用调用集合类型的 `iter` 方法来创建一个迭代器。例如，数组、Vector 或切片，你可以这样使用：
+
+```rs
+let my_vector = vec![1, 2, 3];
+let my_iterator = my_vector.iter();
+```
+
+**迭代器的方法**
+
+一旦有了迭代器，可以使用各种迭代器的方法来处理元素。常见的方法有：
+
+```rs
+fn main() {
+    let my_vector = vec![1, 2, 3];
+
+    let squared_values: Vec<i32> = my_vector.iter().map(|x| x * x).collect();
+    println!("{:?}", squared_values); // [1, 4, 9]
+
+    let even_values: Vec<_> = my_vector.iter().filter(|&x| x % 2 == 0).collect();
+    println!("{:?}", even_values); // [2]
+
+    let sum = my_vector.iter().fold(0, |acc, &x| acc + &x);
+    println!("{}", sum); // 6
+
+    my_vector.iter().for_each(|&x| println!("{}", x));
+}
+```
+
+**消费迭代器**
+
+迭代器分为两种：可消费和不可消费。对迭代器调用可消费方法后，它就不能再被使用了。可消费方法有 `collect`、`sum`、`max`、`min`、`count` 等。
+
+```rs
+fn main() {
+    let my_vector = vec![1, 2, 3];
+
+    let squared_values: Vec<i32> = my_vector.iter().map(|x| x * x).collect();
+    println!("{:?}", squared_values); // [1, 4, 9]
+
+    let sum: i32 = my_vector.iter().sum();
+    println!("{}", sum); // 6
+
+    let max = my_vector.iter().max();
+    print!("{:?}", max); // Some(3)
+
+    let min = my_vector.iter().min();
+    println!("{:?}", min); // Some(1)
+
+    let count = my_vector.iter().count();
+    println!("{}", count); // 3
+}
+```
+
+**自定义迭代器**
+
+你也可以自定义迭代器，实现 `Iterator` trait。这需要实现 `next` 方法，该方法在每次迭代时返回下一个元素或者 `None` 表示迭代结束。
+
+```rs
+fn main() {
+    struct Counter {
+        current: usize,
+        max: usize,
+    }
+
+    impl Iterator for Counter {
+        type Item = usize;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current < self.max {
+                let result = Some(self.current);
+                self.current += 1;
+                result
+            } else {
+                None
+            }
+        }
+    }
+
+    let counter = Counter { current: 0, max: 5 };
+    let values: Vec<_> = counter.collect();
+    println!("{:?}", values) // [0, 1, 2, 3, 4]
+}
+```
