@@ -88,31 +88,9 @@
 //     );
 // }
 
-fn main() {
-    struct Counter {
-        current: usize,
-        max: usize,
-    }
-    
-    impl Iterator for Counter {
-        type Item = usize;
-    
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.current < self.max {
-                let result = Some(self.current);
-                self.current += 1;
-                result
-            } else {
-                None
-            }
-        }
-    }
-    
-    let counter = Counter { current: 0, max: 5 };
-    let values: Vec<_> = counter.collect();
-    println!("{:?}", values) // [0, 1, 2, 3, 4]
-}
 
+fn main() {
+}
 
 
 

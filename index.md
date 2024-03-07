@@ -2022,3 +2022,306 @@ members = [
 
 - rust 的包管理系统，类似于其他语言的包管理工具（如 npm）
 - 使用 `cargo install` 命令可以从 `cargo.io` 安装依赖
+
+## 智能指针
+
+### Box<T>
+
+在 rust 中，`Box<T>` 是一个用于在堆上分配内存并存储类型 `T` 的智能指针。它提供了对在堆上分配的内存进行所有权管理的能力。
+
+`Box<T>` 是一种指针类型，允许你在编译时确保在运行时的一些内存安全性和所有权规则。
+
+1. **堆分配：** `Box<T>` 主要用于在堆上分配内存。`Box<T>` 允许你在堆上动态分配一块内存，并将 `T` 类型的值放在内存中。
+
+2. **所有权管理：** `Box<T>` 提供了对内存块的独占所有权。这意味着在任何时刻，只有一个 `Box<T>` 可以拥有对堆上内存的访问权。当 `Box<T>` 被移动（赋值给另一个 `Box<T>` 或传递给函数等），所有权也被转移。
+
+3. **解引用：** 你可以使用 `*` 运算符对 `Box<T>` 进行解引用，以获得存储在堆上的 `T` 类型的值。
+
+4. **自动释放：** 当 `Box<T>` 超出作用域时，rust 会自动调用 `T` 类型的 `drop` 方法来释放堆上的内存。这保证了内存的正确释放，避免了常见的内存泄漏问题。
+
+5. **使用场景：** `Box<T>` 在需要动态分配内存，或者需要确保数据的所有权关系的场景下非常有用。它通常用于构建递归数据结构、实现 `trait` 对象、或者在需要在不同函数之间传递所有权时。
+
+```rs
+fn main() {
+    // 在堆上分配一个整数
+    let box1: Box<i32> = Box::new(1);
+    // 解引用获取堆上的值
+    let value1 = *box1;
+    println!("{}", value1); // 1
+
+    let box2: Box<String> = Box::new(String::from("Hello World"));
+    let value2 = *box2;
+    println!("{}", value2); // Hello World
+}
+```
+
+### Deref trait
+
+在 rust 中，`Deref` trait 是一个非常重要的 trait，用于实现解引用操作。
+
+通过实现 `Deref` trait，你可以重载解引用操作符 `*`，使得你的类型在使用解引用操作符时能够表现得像指针一样。
+
+`Deref` trait 的定义如下：
+
+```rs
+pub trait Deref {
+    type Target: ?Sized;
+    fn deref(&self) -> &Self::Target;
+}
+```
+
+**type Target** 是一个关联类型，它指定了 `Deref` trait 实现目标类型。这个类型是解引用操作返回的类型。
+
+**deref 方法** 用于返回被解引用的值的引用。当你使用 `*` 操作符堆实现了 `Deref` trait 的类型进行解引用时，它会被自动调用。
+
+```rs
+use std::ops::Deref;
+
+struct MyBox<T>(T);
+
+impl <T> Deref for MyBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+fn main() {
+    let my_box = MyBox(1);
+    // 使用 * 操作符进行解引用
+    let value = *my_box;
+    println!("{}", value);
+}
+```
+
+上述代码中，`MyBox` 结构体实现了 `Deref` trait，所以它的实例 `my_box` 可以被解引用。
+
+### Drop trait
+
+在 rust 中，`Drop` trait 是一个用于执行资源清理操作的特殊 trait。它定义了一个单一的方法 `drop`，该方法在值即将离开作用域时被自动调用。
+
+`Drop` trait 的定义如下：
+
+```rs
+pub trait Drop {
+    fn drop(&mut self);
+}
+```
+
+任何类型都可以实现 `Drop` trait，只需要实现 `drop` 方法。当一个实现了 `Drop` trait 的类型的实例离家作用域时，会自动调用其 `drop` 方法。
+
+```rs
+struct CustomType {
+    data: String
+}
+
+impl Drop for CustomType {
+    fn drop(&mut self) {
+        println!("Dropping CustomType with data {}!", self.data);
+    }
+}
+
+fn main() {
+    let ct1 = CustomType { data: String::from("first") };
+    let ct2 = CustomType { data: String::from("second") };
+    println!("CustomType created.")
+}
+```
+
+上述代码中，我们自定义了一个 `CustomType` 的结构体，并且它实现了 `Drop` trait。代码运行后会输出：
+
+```
+CustomType created.
+Dropping CustomType with data second!
+Dropping CustomType with data first!
+```
+
+变量丢弃的顺序和创建时的顺序相反，所以 `ct2` 在 `ct1` 之前被丢弃。
+
+**使用 std::mem::drop 提前丢弃值**
+
+当我们希望在作用域结束之前就强制释放变量的话，可以使用标准库提供的 `std::mem::drop`。
+
+```rs
+let ct1 = CustomType { data: String::from("first") };
+std::mem::drop(ct1);
+let ct2 = CustomType { data: String::from("second") };
+println!("CustomType created.")
+```
+
+上述代码执行后将输出：
+
+```
+Dropping CustomType with data first!
+CustomType created.
+Dropping CustomType with data second!
+```
+
+### Rc<T>
+
+在 rust 中，`Rc<T>` 是一个引用计数智能指针（Reference Counted smart poiter）的类型。它在内部使用引用计数来追踪指向堆上数据的引用数量。
+
+`Rc` 用于多个所有者之间共享数据，允许多个部分共享对同一块内存的访问，而无需担心所有权的问题。
+
+1. **创建和引用计数：**
+
+使用 `Rc<T>` 时，首先需要将数据包装在 `Rc` 中。
+
+```rs
+use std::rc::Rc;
+
+fn main() {
+    let a = Rc::new(1);
+    println!("count after creating a = {}", Rc::strong_count(&a));
+}
+```
+
+上述代码中，创建了一个包含整数 1 的 `Rc` 的实例。此时，引用计数为 1，因为这是第一个拥有者。
+
+2. **克隆和引用计数递增**
+
+当你想要共享数据的时候，可以通过调用 `clone` 方法来创建指向同一块内存的新引用，同时增加引用计数。
+
+```rs
+use std::rc::Rc;
+
+fn main() {
+    let a = Rc::new(1);
+    println!("count after creating a = {}", Rc::strong_count(&a)); // 1
+
+    let b = Rc::clone(&a);
+    println!("count after creating b = {}", Rc::strong_count(&a)); // 2
+}
+```
+
+现在，`a` 和 `b` 都指向相同的数据，并且引用计数增加为 2。
+
+3. **减少引用次数**
+
+当不再需要某个引用时，可以将其从作用域中移除，从而减小引用次数。
+
+```rs
+use std::rc::Rc;
+
+fn main() {
+    let a = Rc::new(1);
+    println!("count after creating a = {}", Rc::strong_count(&a)); // 1
+
+    let b = Rc::clone(&a);
+    println!("count after creating b = {}", Rc::strong_count(&a)); // 2
+
+    {
+        let c = Rc::clone(&a);
+        println!("count after creating c = {}", Rc::strong_count(&a)); // 3
+    }
+
+    println!("count after c goes out of scope = {}", Rc::strong_count(&a)); // 2
+}
+```
+
+上述代码中，当 `c` 创建的时候，引用计数增加为 3，当 `c` 离开作用域后，引用计数减小为 2。
+
+### RefCell<T>
+
+**内部可变性**是 rust 中的一个设计模式，它允许你即使在有不可变引用时，也可以改变数据，这是借用规则所不允许的。
+
+`RefCell<T>` 是 rust 标准库中的一个类型，用于提供运行时借用检查而不是在编译时进行检查的内部可变性。
+
+在 rust 中，有一条规则，即同一时刻只能有一个可变引用或多个不可变引用，确保在运行时不会出现数据竞争。`RefCell<T>` 允许你绕过这个规则，代价是在运行时进行借用检查。
+
+`RefCell<T>` 的主要特点是，它允许在不可变引用的情况下修改包含在其中的值。
+
+在运行时，`RefCell<T>` 会检查是否存在多个可变引用，如果存在，会导致 `panic`。通过 `borrow` 和 `borrow_mut` 方法分别获取不可变引用和可变引用。
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(1);
+
+    // 获取不可变引用
+    let borrowed = data.borrow();
+    let borrowed2 = data.borrow();
+    println!("{}, {}", borrowed, borrowed2); // 1, 1
+}
+```
+
+上述代码是可以正常运行的，因为可以同时存在多个不可变引用。
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    // 获取可变引用
+    let mut borrow_mut1 = data.borrow_mut();
+    let mut borrow_mut2 = data.borrow_mut();
+}
+```
+
+上述代码会出现 `already borrowed: BorrowMutError` 的错误，因为不可以同时存在多个可变引用。
+
+```rs
+use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(1);
+
+    // 获取不可变引用
+    let borrowed = data.borrow();
+
+    // 获取可变引用
+    let mut borrow_mut = data.borrow_mut();
+}
+```
+
+上述代码也是错误的，因为同时出现了不可变引用和可变引用。
+
+```rs
+use std::cell::RefCell;
+
+// 定义一个结构体，包含一个 RefCell 用于内部可变性
+struct Counter {
+    value: RefCell<i32>,
+}
+
+impl Counter {
+    fn new(initial: i32) -> Counter {
+        Counter {
+            value: RefCell::new(initial),
+        }
+    }
+
+    // 获取当前值的不可变引用
+    fn get_value(&self) -> i32 {
+        *self.value.borrow()
+    }
+
+    // 增加值，在不可变引用的情况下修改数据
+    fn increment(&self) {
+        let mut val = self.value.borrow_mut();
+        *val += 1;
+    }
+}
+
+fn main() {
+    let counter = Counter::new(1);
+
+    // 获取不可变引用并输出当前值
+    println!("Initial value: {}", counter.get_value()); // 1
+
+    // 在不可变引用的情况下调用增加值的方法
+    counter.increment();
+
+    // 再次获取不可变引用并输出修改后的值
+    println!("Initial value: {}", counter.get_value()); // 2
+}
+```
+
+上述代码中，演示了在不可变引用的同时修改数据的情况。在 `get_value` 方法中以不可变引用的方式获取值，并在 `increment` 方法中以可变引用的方式修改值。
+
+**选择 `Box<T>`、`Rc<T>` 或 `RefCell<T>` 的理由：**
+
+- `Rc<T>` 允许相同的数据有多个所有者；`Box<T>` 和 `RefCell<T>` 为单一所有者。
+- `Box<T>` 允许在编译时执行不可变或可变借用检查；`Rc<T>` 仅运行在编译时执行不可变借用检查；`RefCell<T>` 允许在运行时执行不可变或可变借用检查。
+- 因为 `RefCell<T>` 允许在运行时执行不可变或可变借用检查，所以我们可以在即便 `RefCell<T>` 自身不可变的情况下修改其内部的值。
