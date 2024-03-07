@@ -1934,3 +1934,91 @@ fn main() {
     println!("{:?}", values) // [0, 1, 2, 3, 4]
 }
 ```
+
+## Cargo 和 Cargo.io
+
+在 rust 中，`cargo` 是一个非常重要的工具，用于管理项目的构建、依赖和发布。
+
+`cargo` 提供了一种简化的方式来构建、测试和运行 rust 项目，同时还能够管理项目的依赖关系和发布到 `Cargo` 库(`cargo.io`)。
+
+### Cargo
+
+**项目管理：**
+
+- **`cargo new：`** 创建一个新的 rust 项目
+- **`cargo build：`** 构建项目，编译成可执行文件
+- **`cargo run：`** 构建并运行项目
+- **`caargo test：`** 运行项目中的测试
+- **`cargo doc：`** 生成项目的文档
+
+**依赖管理：**
+
+- **`cargo update：`** 更新项目的依赖
+- **`cargo upgrate：`** 升级依赖到最新的版本
+- **`cargo.toml：`** 项目的配置文件，包含依赖和其他配置信息
+
+**发布：**
+
+- **`cargo publish：`** 将库发布到 `cargo.io`
+- **`cargo package：`** 逛街一个用于发布的压缩包
+- **`cargo.lock：`** 记录项目依赖的确切版本，以确保构建时可重复的
+
+**其他命令：**
+
+- **`cargo check：`** 检查代码但不生成可执行文件
+- **`cargo clean：`** 清理项目构建产生的文件
+
+**cargo.toml 中的发布配置**
+
+当项目中的 `cargo.toml` 中没有任何的 `[profile.*]` 部分的时候，`cargo` 会对每一个配置都采用默认设置。`[profile.*]` 对应的部分中的配置覆盖默认的设置。例如：
+
+```toml
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 1
+```
+
+上述代码中，`dev` 和 `release` 都设置了 `opt-level` 的值。`opt-level` 设置控制 rust 对代码进行何种程度的优化，这个配置的值是 0 到 3，值越大编译所需时间越长，代码性能越好。
+
+**cargo 工作空间**
+
+`cargo` 的工作空间是一种组织包含多个相关项目的结构。通过工作空间，你可以方便地管理多个项目，共享依赖关系，并在它们之间共享构建配置。
+
+一个典型的 `cargo` 工作空间包括一个根目录，其中包含一个 `cargo.toml`文件，以及一个或多个子目录 ，每个子目录都是一个独立的 `rust` 项目。
+
+1. **根目录中的 `cargo.toml` 文件：**
+
+在工作空间的根目录中，需要有一个 `cargo.toml` 文件，其中包含有关工作空间的元信息和配置。该文件通常包括 `[workspace]` 部分，以指定这是一个工作空间。
+
+```toml
+# cargo.html
+[workspace]
+members = [
+    "crate1",
+    "crate2",
+    "crate3"
+]
+```
+
+2. **子项目目录：**
+
+工作空间中的每个子项目都是一个独立的 rust 项目，有自己的 `cargo.toml` 文件。
+
+每个子项目目录都是工作空间的成员，通过 `members` 字段在根目录的 `cargo.toml` 中列出。
+
+3. **共享依赖：**
+
+工作空间中的所有子项目可以共享依赖关系。如果多个项目都需要相同的依赖，只需要在根目录的 `cargo.toml` 中指定一次即可。
+
+4. **构建和测试：**
+
+在工作空间的根目录中执行 `cargo build`、`cargo test` 或 `cargo run` 将同时处理所有成员项目。
+
+如果只想处理单个项目，可以使用 `p` 或 `--package` 选项指定需要处理的子项目。
+
+### Cargo.io
+
+- rust 的包管理系统，类似于其他语言的包管理工具（如 npm）
+- 使用 `cargo install` 命令可以从 `cargo.io` 安装依赖
