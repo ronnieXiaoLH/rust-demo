@@ -4,16 +4,33 @@ windows 系统在 [rust 官网](https://www.rust-lang.org/tools/install) 下载 
 
 ## 设置国内的 rust 镜像源
 
-在命令行输入：
+在你的 `.cargo` 目录下面新建 `config` 文件，并给这个文件添加如下内容：
 
-```shell
-set CARGO_REGISTRY=https://mirrors.ustc.edu.cn/crates.io-index
-```
+```conf
+[source.crates-io]
+registry = "https://github.com/rust-lang/crates.io-index"
+# 指定镜像
+replace-with = 'ustc' # 如：tuna、sjtu、ustc，或者 rustcc
 
-查看是否设置成功，在命令行输入：
+# 注：以下源配置一个即可，无需全部
 
-```shell
-echo %CARGO_REGISTRY%
+# 中国科学技术大学
+[source.ustc]
+registry = "https://mirrors.ustc.edu.cn/crates.io-index"
+# >>> 或者 <<<
+# registry = "git://mirrors.ustc.edu.cn/crates.io-index"
+
+# 上海交通大学
+# [source.sjtu]
+#registry = "https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index/"
+
+# 清华大学
+# [source.tuna]
+#registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"
+
+# rustcc社区
+# [source.rustcc]
+#registry = "https://code.aliyun.com/rustcc/crates.io-index.git"
 ```
 
 ## 变量和可变性
@@ -2325,3 +2342,230 @@ fn main() {
 - `Rc<T>` 允许相同的数据有多个所有者；`Box<T>` 和 `RefCell<T>` 为单一所有者。
 - `Box<T>` 允许在编译时执行不可变或可变借用检查；`Rc<T>` 仅运行在编译时执行不可变借用检查；`RefCell<T>` 允许在运行时执行不可变或可变借用检查。
 - 因为 `RefCell<T>` 允许在运行时执行不可变或可变借用检查，所以我们可以在即便 `RefCell<T>` 自身不可变的情况下修改其内部的值。
+
+## 并发
+
+在 rust 中，提供了一套强大而安全的多线程编程工具，允许你创建和管理线程，以及线程间的通信。多线程编程时通过 `std::thread` 模块来实现的。
+
+1. **创建线程**
+
+使用 `std::thread::spawn` 函数可以创建一个新的线程，这个函数接受一个闭包（或函数）作为参数，表示该线程的主题逻辑。
+
+```rs
+use std::thread;
+
+fn main() {
+    thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+        }
+    });
+
+    for i in 1..5 {
+        println!("hi number {} from the main thread!", i);
+    }
+}
+```
+
+上述代码中，创建了一个新的线程，但是新的线程的逻辑并不能保证全部执行完。
+
+可以通过将 `thread::spawn` 的返回值存在变量中来修复新建线程部分没有执行或完全没有时间执行的问题。`thread::spawn` 的返回值类型是 `JoinHandle`，它是一个拥有所有权的值，当其调用 `join` 方法时，它会等待其线程结束。
+
+```rs
+use std::thread;
+
+fn main() {
+    let handle = thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+        }
+    });
+
+    for i in 1..5 {
+        println!("hi number {} from the main thread!", i);
+    }
+
+    handle.join().unwrap();
+}
+```
+
+2. **线程与 move 闭包**
+
+```rs
+use std::thread;
+
+fn main() {
+    let v = vec![1, 2, 3];
+
+    let handle = thread::spawn(|| {
+        println!("Here's a vector: {:?}", v);
+    });
+
+    handle.join().unwrap();
+}
+```
+
+上述代码会出现 `closure may outlive the current function, but it borrows `v`, which is owned by the current function` 的错误。原因是 `println!` 需要 `v` 的引用，闭包尝试借用 `v`，但是 rust 并不知道这个新建线程会执行多久，所以无法知晓 `v` 的引用是否一直有效。
+
+```rs
+use std::thread;
+
+fn main() {
+    let v = vec![1, 2, 3];
+
+    let handle = thread::spawn(move || {
+        println!("Here's a vector: {:?}", v);
+    });
+
+    handle.join().unwrap();
+}
+```
+
+上述代码中，通过在闭包之前增加 `move` 关键字，强制闭包获取其使用值的所有权。
+
+3. 线程间消息传递
+
+在 rust 中，支持通过通道进行线程间的消息传递。
+
+```rs
+use std::{sync::mpsc, thread};
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let val = String::from("hi");
+        tx.send(val).unwrap();
+    });
+
+    let received = rx.recv().unwrap();
+    println!("Got: {}", received);
+}
+```
+
+上述代码中，使用 `mpsc::channel` 方法创建一个新的通道。`mpsc` 是**多个生产者，单个消费者（multiple producer,single comsumer）**的缩写。`mpsc::channel` 方法返回一个元素，第一个元素是发送端，第二个元素是接收端。
+
+通道的接收端有两个有用的方法：`recv` 和 `try_recv`。`recv` 会阻塞主线程执行直到从通道中接收到值。`try_recv` 不会阻塞，相反它立刻返回一个 `Result<T, E>`：`Ok` 值包含可用的信息，`Err` 值表示此时没有任何消息。
+
+```rs
+use std::{sync::mpsc, thread, time::Duration};
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    for received in rx {
+        println!("Got: {}", received);
+    }
+}
+```
+
+上述代码中，当通道的发送端 `tx` 发送多条消息的时候，需要将 `rx` 当做一个迭代器。当通道关闭时，迭代器也将结束。
+
+```rs
+use std::{sync::mpsc, thread, time::Duration};
+
+fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    let tx2 = tx.clone();
+
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx2.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    for received in rx {
+        println!("Got: {}", received);
+    }
+}
+```
+
+上述代码中，通过克隆发送者来创建了多个生产者。
+
+4. **共享状态并发**
+
+在 `rust` 中，提供了 `std:sync` 模块，其中包含了一些用于多线程通信的工具，如 `Mutex`、`Arc` 等。
+
+`Mutex` （互斥锁）允许多个线程访问共享数据，但一次只有一个线程可以对数据进行修改。
+
+```rs
+use std::sync::Mutex;
+
+fn main() {
+    let m = Mutex::new(1);
+
+    {
+        let mut num = m.lock().unwrap();
+        *num = 2;
+    }
+
+    println!("{}", m.lock().unwrap()); // 2
+}
+```
+
+上述代码中，演示了在单线程上下文中使用 `Mutex`。
+
+```rs
+use std::{sync::{Arc, Mutex}, thread};
+
+fn main() {
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("{}", *counter.lock().unwrap()); // 10
+}
+```
+
+上述代码中，演示了使用 `Arc<T>` 包装一个 `Mutex<T>` 实现多线程之间共享所有权。
+
+在 rust 中，`Arc<T>` （原子引用计数）是一种智能指针，用于在多线程环境中共享数据。`Arc` 提供了引用计数的功能，以便在堆上分配的数据可以被多个所有者共享，并且在所有所有者都不再需要数据时自动释放。
