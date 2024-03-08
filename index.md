@@ -2569,3 +2569,173 @@ fn main() {
 上述代码中，演示了使用 `Arc<T>` 包装一个 `Mutex<T>` 实现多线程之间共享所有权。
 
 在 rust 中，`Arc<T>` （原子引用计数）是一种智能指针，用于在多线程环境中共享数据。`Arc` 提供了引用计数的功能，以便在堆上分配的数据可以被多个所有者共享，并且在所有所有者都不再需要数据时自动释放。
+
+## 面向对象特性
+
+rust 是一种系统级别的编程语言，它强调安全性、并发性和性能。与一些其他语言不同，rust 并不是一种传统的面向对象编程语言，它更强调所有权系统和借用检查器来管理内存安全。
+
+然而，rust 仍然具有一些面向对象编程风格的特性。
+
+**结构体：** 在 rust 中，你可以使用结构体定义数据结构，这与面向对象编程中的类相似。结构体还可以定义方法。
+
+```rs
+struct AveragedCollection {
+    list: Vec<i32>,
+    average: f64,
+}
+
+impl AveragedCollection {
+    fn add(&mut self, value: i32) {
+        self.list.push(value);
+        self.update_average();
+    }
+
+    fn remove(&mut self) -> Option<i32> {
+        let result = self.list.pop();
+
+        match result {
+            Some(value) => {
+                self.update_average();
+                Some(value)
+            }
+            None => None,
+        }
+    }
+
+    fn update_average(&mut self) {
+        let total: i32 = self.list.iter().sum();
+        self.average = total as f64 / self.list.len() as f64;
+    }
+}
+```
+
+**Trait：** rust 中的 trait 类似于其他语言中的接口，它定义一组方法，结构体或枚举可以实现这些方法。trait 允许在不同类型之间共享行为。
+
+```rs
+trait Shape {
+    fn area(&self) -> f64;
+}
+
+struct Rectangle {
+    width: f64,
+    height: f64,
+}
+
+impl Shape for Rectangle {
+    fn area(&self) -> f64 {
+        self.width * self.height
+    }
+}
+
+struct Circle {
+    radius: f64
+}
+
+impl Shape for Circle {
+    fn area(&self) -> f64 {
+        std::f64::consts::PI * self.radius * self.radius
+    }
+}
+```
+
+## 模式语法
+
+**\_**
+
+在 rust 中，如果你定义了一个变量，却不在任何地方使用它，通常会给你一个警告，如果你再这个变量前面加上一个 `_`，将不会得到警告。
+
+```rs
+let x = 1;
+let _y = 2;
+```
+
+上述代码中，变量 `x` 会得到一个警告 `unused variable: x`，变量 `y` 没有警告。
+
+```rs
+fn main() {
+    let s1 = String::from("hello");
+    let _ = s1;
+    println!("{:?}", s1);
+
+    let s2 = String::from("hello");
+    let _s = s2;
+    println!("{:?}", s2); // borrow of moved value: `s2`
+}
+```
+
+上述代码中，将 `s1` 的值赋值给 `_`，`s1` 的所有权还是在它自己，所以赋值后 `s1` 还可以访问。将 `s2` 的值赋值给 `_s` 后，所有权也一并转移了，所以赋值后 `s2` 不可以访问。
+
+```rs
+
+fn main() {
+    let s = Some(String::from("hello"));
+
+    if let Some(_) = s {
+        println!("found a string");
+    }
+
+    if let Some(_s) = s {
+        println!("found a string");
+    }
+
+    println!("{:?}", s); // borrow of partially moved value: `s`
+}
+```
+
+这个例子中，同上。
+
+**匹配守卫**
+
+在 rust 中，匹配守卫是一种在 `match` 表达式中使用的功能，用于在模式匹配时添加额外的条件。这使得在匹配中可以使用更复杂的条件，而不仅仅是模式本身。
+
+匹配守卫是通过 `if` 关键字引入的条件表达式来实现的。在 `match` 语句中，当模式匹配成功时，如果存在匹配守卫，将会进一步检查守卫中的条件，只有当守卫条件为真时，响应的代码块才会执行。
+
+```rs
+fn main() {
+    let value: i32 = 25;
+
+    match value {
+        1 | 2 | 3 if value > 0 => {
+            println!("Small positive number");
+        }
+        10..=50 if value % 2 == 0 => {
+            println!("Even number in the range 10 to 50");
+        }
+        _ => {
+            println!("Something else");
+        }
+    };
+}
+```
+
+上述代码中，有两个匹配守卫：`1 | 2 | 3 if value > 0` 和 `10..=50 if value % 2 == 0`，分别匹配值为 1、2 或 3，并且同时要求值大于 0，匹配值在 10 到 50 的范围内，并且要求值为偶数。当值为 25 时，两个匹配守卫都不满足，所以输出 `Something else`。
+
+**@绑定**
+
+at 运算符（`@`）允许我们在创建一个存放值的变量的同时，测试其值是否匹配模式。
+
+```rs
+fn main() {
+    enum Message {
+        Hello { id: i32 },
+    }
+
+    let msg = Message::Hello { id: 5 };
+
+    match msg {
+        Message::Hello {
+            id: id_variable @ 3..=7,
+        } => {
+            println!("Found an id in range: {}", id_variable)
+        }
+        Message::Hello { id: 10..=12 } => {
+            println!("Found an id in another range")
+        }
+        Message::Hello { id } => {
+            println!("Found some other id: {}", id)
+        }
+    }
+}
+```
+
+上述代码运行后，会打印出 `Found an id in range: 5`。通过在 `3..7` 之前指定 `id_variable @`，我们捕获了任何匹配此范围的值并同时测试其值匹配这个范围模式。

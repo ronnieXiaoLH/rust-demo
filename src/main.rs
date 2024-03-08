@@ -1,8 +1,8 @@
 // mod number_guessing;
 
 // fn main() {
-    // println!("Hello rust");
-    // number_guessing::main();
+// println!("Hello rust");
+// number_guessing::main();
 // }
 
 // use std::env;
@@ -39,7 +39,7 @@
 //     value: Option<u32>,
 // }
 
-// impl<T> Cacher<T> 
+// impl<T> Cacher<T>
 //     where T: Fn(u32) -> u32
 // {
 //     fn new(calculation: T) -> Cacher<T> {
@@ -88,11 +88,50 @@
 //     );
 // }
 
+// use std::{
+//     sync::{Arc, Mutex},
+//     thread,
+// };
 
+// fn main() {
+//     let counter = Arc::new(Mutex::new(0));
+//     let mut handles = vec![];
+
+//     for _ in 0..10 {
+//         let counter = Arc::clone(&counter);
+//         let handle = thread::spawn(move || {
+//             let mut num = counter.lock().unwrap();
+//             *num += 1;
+//         });
+//         handles.push(handle);
+//     }
+
+//     for handle in handles {
+//         handle.join().unwrap();
+//     }
+
+//     println!("{}", *counter.lock().unwrap()); // 10
+// }
+
+#![allow(unused)]
 fn main() {
+    enum Message {
+        Hello { id: i32 },
+    }
+
+    let msg = Message::Hello { id: 5 };
+
+    match msg {
+        Message::Hello {
+            id: id_variable @ 3..=7,
+        } => {
+            println!("Found an id in range: {}", id_variable)
+        }
+        Message::Hello { id: 10..=12 } => {
+            println!("Found an id in another range")
+        }
+        Message::Hello { id } => {
+            println!("Found some other id: {}", id)
+        }
+    }
 }
-
-
-
-
-
